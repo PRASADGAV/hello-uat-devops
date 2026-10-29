@@ -1,0 +1,15 @@
+hello-uat-devops/
+├── hello.py
+├── test_hello.py
+├── requirements.txt
+├── requirements-monitoring.txt
+├── Dockerfile
+├── .dockerignore
+├── .gitignore
+├── Jenkinsfile
+├── monitor.py
+├── README.md
+├── INSTALLATION_SUMMARY_TEMPLATE.md
+├── PROJECT_STRUCTURE.txt
+└── reports/
+    └── .gitkeep
