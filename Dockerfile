@@ -8,8 +8,8 @@ WORKDIR /app
 
 # Install all dependencies (app + monitoring)
 COPY requirements.txt requirements-monitoring.txt ./
-RUN python -m pip install --upgrade pip && \
-    python -m pip install --no-cache-dir --timeout=300 --retries=5 -r requirements.txt -r requirements-monitoring.txt
+# Skip pip upgrade and install directly with increased timeout
+RUN python -m pip install --no-cache-dir --timeout=300 --retries=5 -r requirements.txt -r requirements-monitoring.txt
 
 COPY hello.py test_hello.py monitor.py ./
 
