@@ -6,10 +6,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY requirements.txt ./
-RUN python -m pip install --no-cache-dir -r requirements.txt
+# Install all dependencies (app + monitoring)
+COPY requirements.txt requirements-monitoring.txt ./
+RUN python -m pip install --no-cache-dir -r requirements.txt -r requirements-monitoring.txt
 
-COPY hello.py test_hello.py ./
+COPY hello.py test_hello.py monitor.py ./
 
 # Default container action: run the app. Tests can override CMD at docker run time.
 CMD ["python", "hello.py"]

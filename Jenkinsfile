@@ -7,6 +7,7 @@ pipeline {
 
     environment {
         PYTHONUNBUFFERED = '1'
+        DOCKER_IMAGE = "hello-uat-python:${env.BUILD_NUMBER}"
     }
 
     stages {
@@ -20,12 +21,10 @@ pipeline {
             steps {
                 script {
                     if (isUnix()) {
-                        sh 'python3 --version'
                         sh 'git --version'
                         sh 'docker --version'
                         sh 'docker info'
                     } else {
-                        bat 'py -3 --version'
                         bat 'git --version'
                         bat 'docker --version'
                         bat 'docker info'
@@ -34,52 +33,55 @@ pipeline {
             }
         }
 
-        stage('Install dependencies and run pytest') {
+        stage('Build Docker image with dependencies') {
             steps {
                 script {
                     if (isUnix()) {
-                        sh 'python3 -m venv .venv'
-                        sh '.venv/bin/python -m pip install --upgrade pip'
-                        sh '.venv/bin/python -m pip install -r requirements.txt -r requirements-monitoring.txt'
-                        sh 'mkdir -p reports'
-                        sh '.venv/bin/python -m pytest -q --junitxml=reports/pytest.xml'
-                    } else {
-                        bat 'py -3 -m venv .venv'
-                        bat '.venv\\Scripts\\python.exe -m pip install --upgrade pip'
-                        bat '.venv\\Scripts\\python.exe -m pip install -r requirements.txt -r requirements-monitoring.txt'
-                        bat 'if not exist reports mkdir reports'
-                        bat '.venv\\Scripts\\python.exe -m pytest -q --junitxml=reports/pytest.xml'
-                    }
-                }
-            }
-        }
-
-        stage('Build and run Docker image') {
-            steps {
-                script {
-                    def imageTag = "hello-uat:${env.BUILD_NUMBER}"
-                    if (isUnix()) {
-                        sh "docker pull python:3.12-slim"
-                        sh "docker build -t ${imageTag} ."
-                        sh "docker run --rm ${imageTag}"
-                        sh "docker run --rm ${imageTag} python -m pytest -q"
+                        sh 'docker pull python:3.12-slim'
+                        sh "docker build -t ${env.DOCKER_IMAGE} ."
                     } else {
                         bat 'docker pull python:3.12-slim'
-                        bat "docker build -t ${imageTag} ."
-                        bat "docker run --rm ${imageTag}"
-                        bat "docker run --rm ${imageTag} python -m pytest -q"
+                        bat "docker build -t ${env.DOCKER_IMAGE} ."
                     }
                 }
             }
         }
 
-        stage('Evidently monitoring report') {
+        stage('Run tests in Docker') {
             steps {
                 script {
                     if (isUnix()) {
-                        sh '.venv/bin/python monitor.py'
+                        sh 'mkdir -p reports'
+                        sh "docker run --rm -v \$(pwd)/reports:/app/reports ${env.DOCKER_IMAGE} python -m pytest -q --junitxml=/app/reports/pytest.xml"
                     } else {
-                        bat '.venv\\Scripts\\python.exe monitor.py'
+                        bat 'if not exist reports mkdir reports'
+                        bat "docker run --rm -v %CD%\\reports:/app/reports ${env.DOCKER_IMAGE} python -m pytest -q --junitxml=/app/reports/pytest.xml"
+                    }
+                }
+            }
+        }
+
+        stage('Run application in Docker') {
+            steps {
+                script {
+                    if (isUnix()) {
+                        sh "docker run --rm ${env.DOCKER_IMAGE}"
+                    } else {
+                        bat "docker run --rm ${env.DOCKER_IMAGE}"
+                    }
+                }
+            }
+        }
+
+        stage('Generate monitoring report in Docker') {
+            steps {
+                script {
+                    if (isUnix()) {
+                        sh 'mkdir -p reports'
+                        sh "docker run --rm -v \$(pwd)/reports:/app/reports -v \$(pwd)/monitor.py:/app/monitor.py -v \$(pwd)/requirements-monitoring.txt:/app/requirements-monitoring.txt ${env.DOCKER_IMAGE} bash -c 'pip install -r requirements-monitoring.txt && python monitor.py'"
+                    } else {
+                        bat 'if not exist reports mkdir reports'
+                        bat "docker run --rm -v %CD%\\reports:/app/reports -v %CD%\\monitor.py:/app/monitor.py -v %CD%\\requirements-monitoring.txt:/app/requirements-monitoring.txt ${env.DOCKER_IMAGE} python -c \"import subprocess; subprocess.run(['pip', 'install', '-r', 'requirements-monitoring.txt']); exec(open('monitor.py').read())\""
                     }
                 }
             }
