@@ -38,10 +38,10 @@ pipeline {
                 script {
                     if (isUnix()) {
                         sh 'docker pull python:3.12-slim'
-                        sh "docker build -t ${env.DOCKER_IMAGE} ."
+                        sh "docker build --network=host --build-arg PIP_DEFAULT_TIMEOUT=300 -t ${env.DOCKER_IMAGE} ."
                     } else {
                         bat 'docker pull python:3.12-slim'
-                        bat "docker build -t ${env.DOCKER_IMAGE} ."
+                        bat "docker build --network=host --build-arg PIP_DEFAULT_TIMEOUT=300 -t ${env.DOCKER_IMAGE} ."
                     }
                 }
             }
