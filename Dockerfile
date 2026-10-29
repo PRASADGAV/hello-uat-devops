@@ -6,12 +6,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install all dependencies (app + monitoring)
-COPY requirements.txt requirements-monitoring.txt ./
-# Skip pip upgrade and install directly with increased timeout
-RUN python -m pip install --no-cache-dir --timeout=300 --retries=5 -r requirements.txt -r requirements-monitoring.txt
+# Install only essential dependencies (just pytest)
+COPY requirements.txt ./
+RUN python -m pip install --no-cache-dir -r requirements.txt
 
-COPY hello.py test_hello.py monitor.py ./
+COPY hello.py test_hello.py ./
 
 # Default container action: run the app. Tests can override CMD at docker run time.
 CMD ["python", "hello.py"]
